@@ -4,9 +4,8 @@ This branch follows ScummVM's upstream Nintendo DS port and its devkitPro SDK.
 Its starting point is the upstream v2026.4.0 release. Gloam itself continues to
 use BlocksDS; applications launched by Gloam do not need to use the same SDK.
 
-The BlocksDS experiment remains on `experimental/ds-blocksds-discovery` as a
-reference. Do not merge its filesystem replacements or SDK build substitutions
-into this branch.
+Use upstream filesystem and SDK build support; keep launcher integration
+independent of toolchain replacements.
 
 ## Build
 
