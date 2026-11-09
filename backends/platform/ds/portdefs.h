@@ -65,7 +65,7 @@
 #undef assert
 #define assert(e) sassert(e, " ")
 
-#ifndef DISABLE_COMMAND_LINE
+#if !defined(SCUMMVM_DS_COMMAND_LINE) && !defined(DISABLE_COMMAND_LINE)
 #define DISABLE_COMMAND_LINE
 #endif
 
