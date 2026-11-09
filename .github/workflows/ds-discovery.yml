@@ -1,0 +1,37 @@
+name: DS discovery build
+
+on:
+  push:
+    branches: [ds-discovery]
+    paths: ['backends/**', 'base/**', 'common/**', 'dists/ds/**', 'configure', '.github/workflows/ds-discovery.yml']
+  pull_request:
+    branches: [ds-discovery]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Build the complete DS module baseline
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    container:
+      image: devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Record SDK versions
+        run: dkp-pacman -Q devkitARM libnds calico maxmod-nds ndstool nds-libmad nds-zlib
+      - name: Build and check DS parser and modules
+        env:
+          FULL: ${{ inputs.full || false }}
+        run: |
+          if [ "$FULL" = true ]; then
+            python3 dists/ds/build-discovery.py /tmp/scummvm-ds --jobs=2
+          else
+            python3 dists/ds/build-discovery.py /tmp/scummvm-ds --engines=sky,lure --jobs=2
+          fi
