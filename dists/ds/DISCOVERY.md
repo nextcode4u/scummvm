@@ -1,8 +1,8 @@
-# Gloam discovery branch
+# Nintendo DS discovery branch
 
 This branch follows ScummVM's upstream Nintendo DS port and its devkitPro SDK.
-Its starting point is the upstream v2026.4.0 release. Gloam itself continues to
-use BlocksDS; applications launched by Gloam do not need to use the same SDK.
+Its starting point is the upstream v2026.4.0 release. Compatible homebrew
+launchers can pass command-line arguments without using the same SDK.
 
 Use upstream filesystem and SDK build support; keep launcher integration
 independent of toolchain replacements.
@@ -49,9 +49,10 @@ CI requires no games, BIOS, NAND, SD images or emulator modification.
 
 ## Discovery and layout
 
-Place the application at `/roms/ScummVM/scummvm.nds` and keep each game's data
-in its own folder below `/roms/ScummVM/titles/`. Gloam's startup association
-passes the following arguments:
+Keep each game's data in its own directory. For example, place the application
+at `/roms/ScummVM/scummvm.nds` and games below `/roms/ScummVM/titles/`. Configure
+a compatible launcher to pass the following arguments, adjusting the path to
+match your installation:
 
 ```text
 --add --recursive --path=sd:/roms/ScummVM/titles --no-exit
@@ -61,7 +62,8 @@ This uses upstream's discovery code, then opens the normal ScummVM game list.
 Repeated scans skip known target IDs and preserve their settings. Moving or
 removing a game's folder does not automatically repair or remove an existing
 entry: edit its path or remove the entry in ScummVM. Save files are not deleted
-by discovery. An explicit `.argv` invocation bypasses Gloam's automatic arguments.
+by discovery. Pass these options using your launcher's argument configuration;
+this branch does not require a particular launcher or directory layout.
 Game data, BIOS, firmware and NAND images are not included.
 
 ## Scope and validation
@@ -82,7 +84,7 @@ The full 43-engine dynamic build and the smaller two-engine CI build compile.
 Emulator tests cover discovery of Beneath a Steel Sky and Lure of the Temptress,
 retention of existing game settings, and Lure gameplay. The static Lure build
 also passes saving, cold-start save enumeration/restoration and returning to
-ScummVM's launcher and then Gloam. These checks do not establish compatibility
+ScummVM's launcher and then the calling homebrew launcher. These checks do not establish compatibility
 for every engine or physical DS/DSi hardware.
 
 A direct restore from the game list in the full dynamic build can stall during
@@ -90,8 +92,8 @@ detection-plugin unloading. This remains under investigation; successful static
 save tests do not establish that this dynamic route is ready for release.
 The Sky intro also produces nonzero stereo output in the emulator. Listening
 checks, broader game coverage, flashcards and physical-device behavior still
-need validation. Keep experimental binaries separate from the stable add-on
-installer until these compatibility checks pass.
+need validation. Keep these builds experimental until the compatibility checks
+pass.
 
 ## Local release companions
 
@@ -116,7 +118,7 @@ The outputs are `scummvm.nds`, a runtime-only `scummvm-ds.zip`, `licenses.zip`,
 retain ScummVM and SDK notices; SDK source archives and patches are included in
 the source package. Keep companions available alongside any distributed binary.
 The script prepares local files only: it does not create a tag, publish a GitHub
-release or update Gloam's add-on catalog. Generated files stay out of git.
+release or update external installers. Generated files stay out of git.
 
 ## Upstream updates
 
@@ -128,5 +130,5 @@ update and drop local workarounds once upstream provides an equivalent fix.
 
 Build using the normal SDK, then check ordinary GUI startup, discovery, repeated
 scans, game launch, input/audio and cold save readback. Verify that scans preserve
-existing settings. A supported binary release and add-on installer update need
+existing settings. A supported binary release needs
 these checks plus source/license companions. Physical DSi testing is still needed.
