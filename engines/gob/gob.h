@@ -29,6 +29,7 @@
 #define GOB_GOB_H
 
 #include "common/random.h"
+#include "common/str-enc.h"
 #include "common/system.h"
 #include "common/text-to-speech.h"
 
@@ -230,8 +231,8 @@ public:
 
 #ifdef USE_TTS
 	bool _weenVoiceNotepad;
-	Common::CodePage _ttsEncoding;
 #endif
+	Common::CodePage _ttsEncoding;
 
 	const char *getLangDesc(int16 language) const;
 	void validateLanguage();

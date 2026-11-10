@@ -396,6 +396,8 @@ Common::Error GobEngine::run() {
 		ttsMan->enable(ConfMan.getBool("tts_enabled"));
 	}
 
+#endif
+
 	switch (_language) {
 	case Common::HU_HUN:
 		_ttsEncoding = Common::CodePage::kWindows1250;
@@ -416,7 +418,6 @@ Common::Error GobEngine::run() {
 		_ttsEncoding = Common::CodePage::kDos850;
 		break;
 	}
-#endif
 
 	_init->initGame();
 
