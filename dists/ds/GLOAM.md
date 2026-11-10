@@ -9,38 +9,109 @@ independent of toolchain replacements.
 
 ## Build
 
-Install devkitPro's Nintendo DS development packages. The static discovery build was compiled with devkitARM r67.1, libnds 2.0.2, Calico 1.2.0, maxmod-nds 2.1.0 and
-ndstool 2.3.1. These are SDK package versions; libnds 1.8.3 is not a devkitARM
-version. Use upstream's compiler configuration, ARM7 and packaging rules.
+Install devkitPro's Nintendo DS development packages and `nds-libmad`. The
+baseline was compiled with devkitARM r67.1, libnds 2.0.2, Calico 1.2.0,
+maxmod-nds 2.1.0 and ndstool 2.3.1. Use upstream's compiler, matching ARM7,
+plugin loader and packaging rules. libnds and devkitARM have separate version
+numbers.
 
-For a small discovery test build, use an empty build directory and a source path
-without spaces (a symlink is sufficient):
+Build outside the source checkout:
 
 ```sh
-export DEVKITPRO=/opt/devkitpro
-export DEVKITARM="$DEVKITPRO/devkitARM"
-export PATH="$DEVKITARM/bin:$DEVKITPRO/tools/bin:$PATH"
-export PKG_CONFIG_LIBDIR="$DEVKITPRO/portlibs/nds/lib/pkgconfig"
-CXX="$DEVKITARM/bin/arm-none-eabi-g++" CXXFLAGS=-DSCUMMVM_DS_COMMAND_LINE \
-  /path/to/scummvm/configure --host=ds --disable-all-engines \
-  --enable-engine=lure --enable-release --disable-debug \
-  --disable-mad --disable-ogg --disable-vorbis --disable-flac --disable-tremor \
-  --disable-libcurl --disable-sdlnet
-make -j4
+python3 dists/ds/build-discovery.py /tmp/scummvm-ds --jobs=4
 ```
 
-This static Lure build is a diagnostic target, not the full DS engine package.
-The opt-in define enables upstream's existing command-line parser. Without it,
-the original DS parser setting is preserved. Gloam supplies discovery arguments
-for `/roms/ScummVM/titles/`; ScummVM owns game detection and its configuration.
+The default engine list in `discovery-engines.txt` matches the 43-module baseline
+of the upstream 2.9.1 DS package, compiled here from current upstream source.
+Modules are embedded in NitroFS along with their detection plugin and data.
+Module presence is not a compatibility claim for every game in an engine.
+The selected build enables zlib and MP3, with Ogg/Vorbis/FLAC disabled.
 
-## Scope
+For a smaller diagnostic build, add `--engines=sky,lure`. `--static` embeds the
+selected engines directly. `--configure-only` checks the SDK and generates build
+configuration without compiling. The source-path symlink handles spaces in the
+checkout; the build directory and SDK paths must not contain spaces because of
+upstream configure assumptions.
 
-The maintained delta is the parser opt-in and this guide. The earlier timer,
-filesystem and BlocksDS build changes are not carried over. The upstream SDK
-build has discovered Lure from a clean game list, preserved an existing volume
-setting and reached the game intro in the development emulator. This does not
-establish broader engine, audio, game-save, return or physical-device support.
+The helper checks the parser's default, opt-in and explicit-disable behavior,
+checks ARM9/ARM7 payloads and requested module presence, and records source,
+compiler and SDK-library hashes in `discovery-build.json`. It recreates the three
+archives renamed by upstream's TWL fixup so incremental archive updates cannot
+retain stale renamed objects. It does not patch generated compiler/linker flags.
+
+CI uses a digest-pinned official devkitPro image and builds the `sky,lure` dynamic
+module subset. The manual workflow's `full` option builds the complete baseline.
+CI requires no games, BIOS, NAND, SD images or emulator modification.
+
+## Discovery and layout
+
+Place the application at `/roms/ScummVM/scummvm.nds` and keep each game's data
+in its own folder below `/roms/ScummVM/titles/`. Gloam's startup association
+passes the following arguments:
+
+```text
+--add --recursive --path=sd:/roms/ScummVM/titles --no-exit
+```
+
+This uses upstream's discovery code, then opens the normal ScummVM game list.
+Repeated scans skip known target IDs and preserve their settings. Moving or
+removing a game's folder does not automatically repair or remove an existing
+entry: edit its path or remove the entry in ScummVM. Save files are not deleted
+by discovery. An explicit `.argv` invocation bypasses Gloam's automatic arguments.
+Game data, BIOS, firmware and NAND images are not included.
+
+## Scope and validation
+
+The maintained changes are the command-line opt-in, a DS save-cache startup fix,
+and the isolated build, CI and release helpers. The save manager now registers
+`.` as its default save directory so its first scan is not skipped when the
+cache also starts with an empty directory name. Explicit user save paths retain
+precedence. The earlier timer, filesystem and BlocksDS port changes are not
+carried over.
+
+The branch also backports upstream's
+[`BASE: Fix __dso_handle definition`](https://github.com/scummvm/scummvm/commit/199a2b078e5f0d2a4871577d11bfc7e7413a9abe)
+without modification. The build helper checks each module's initialized,
+self-relocated destructor handle to reject stale pre-fix plugins.
+
+The full 43-engine dynamic build and the smaller two-engine CI build compile.
+Emulator tests cover discovery of Beneath a Steel Sky and Lure of the Temptress,
+retention of existing game settings, and Lure gameplay. The static Lure build
+also passes saving, cold-start save enumeration/restoration and returning to
+ScummVM's launcher and then Gloam. These checks do not establish compatibility
+for every engine or physical DS/DSi hardware.
+
+A direct restore from the game list in the full dynamic build can stall during
+detection-plugin unloading. This remains under investigation; successful static
+save tests do not establish that this dynamic route is ready for release.
+Audio, broader game coverage, flashcards and physical-device behavior still
+need validation. Keep experimental binaries separate from the stable add-on
+installer until these compatibility checks pass.
+
+## Local release companions
+
+Use Python 3.11 or later. Commit and push the source first, then run a clean
+build so its manifest identifies the exact published revision. Prepare packages
+outside the checkout:
+
+```sh
+python3 -B dists/ds/test-discovery.py
+python3 dists/ds/build-discovery.py /tmp/scummvm-ds --jobs=4
+python3 dists/ds/prepare-release.py /tmp/scummvm-ds \
+  --cache /tmp/scummvm-sdk-sources --output /tmp/scummvm-release
+```
+
+`prepare-release.py` verifies the binary, source revision, ARM7, SDK libraries
+and compiler runtimes against the reviewed lock file. It downloads that exact
+fork revision and checksum-pinned SDK sources and patches. A different SDK
+requires a source and notice review before updating `discovery-sdk.json`.
+
+The outputs are `scummvm.nds`, a runtime-only `scummvm-ds.zip`, `licenses.zip`,
+`source.zip`, `build-info.json` and `SHA256SUMS`. Source and license companions
+retain ScummVM and SDK notices; SDK source archives and patches are included in
+the source package. Keep companions available alongside any distributed binary.
+The script prepares local files only: it does not create a tag, publish a GitHub
+release or update Gloam's add-on catalog. Generated files stay out of git.
 
 ## Upstream updates
 
