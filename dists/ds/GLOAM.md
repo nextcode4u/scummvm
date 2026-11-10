@@ -84,7 +84,8 @@ for every engine or physical DS/DSi hardware.
 A direct restore from the game list in the full dynamic build can stall during
 detection-plugin unloading. This remains under investigation; successful static
 save tests do not establish that this dynamic route is ready for release.
-Audio, broader game coverage, flashcards and physical-device behavior still
+The Sky intro also produces nonzero stereo output in the emulator. Listening
+checks, broader game coverage, flashcards and physical-device behavior still
 need validation. Keep experimental binaries separate from the stable add-on
 installer until these compatibility checks pass.
 
