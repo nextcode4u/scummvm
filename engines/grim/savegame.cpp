@@ -34,7 +34,7 @@ namespace Grim {
 #define SAVEGAME_FOOTERTAG  'ESAV'
 
 uint SaveGame::SAVEGAME_MAJOR_VERSION = 22;
-uint SaveGame::SAVEGAME_MINOR_VERSION = 29;
+uint SaveGame::SAVEGAME_MINOR_VERSION = 30;
 
 SaveGame *SaveGame::openForLoading(const Common::String &filename) {
 	Common::InSaveFile *inSaveFile = g_system->getSavefileManager()->openForLoading(filename);
@@ -178,7 +178,7 @@ uint64 SaveGame::readLEUint64() {
 		error("SaveGame::readBlock called when storing a savegame");
 	if (_currentSection == 0)
 		error("Tried to read a block without starting a section");
-	uint32 data = READ_LE_UINT64(&_sectionBuffer[_sectionPtr]);
+	uint64 data = READ_LE_UINT64(&_sectionBuffer[_sectionPtr]);
 	_sectionPtr += 8;
 	return data;
 }

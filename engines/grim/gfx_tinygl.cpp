@@ -86,7 +86,11 @@ void GfxTinyGL::setupScreen(int screenW, int screenH) {
 
 	_pixelFormat = g_system->getScreenFormat();
 	debug(2, "INFO: TinyGL front buffer pixel format: %s", _pixelFormat.toString().c_str());
-	TinyGL::createContext(screenW, screenH, _pixelFormat, 256, true, ConfMan.getBool("dirtyrects"));
+
+	// The default 5 MB per-frame draw call allocator is not enough for the Blue Casket interior (bi.set)
+	// during the cutscene where Olivia and Nick kiss
+	TinyGL::createContext(screenW, screenH, _pixelFormat, 256, true, ConfMan.getBool("dirtyrects"),
+	                      6 * 1024 * 1024);
 
 	_storedDisplay = new Graphics::Surface;
 	_storedDisplay->create(_gameWidth, _gameHeight, _pixelFormat);
@@ -104,6 +108,8 @@ void GfxTinyGL::setupScreen(int screenW, int screenH) {
 	if (g_grim->getGameType() == GType_GRIM) {
 		tglPolygonOffset(-6.0, -6.0);
 	}
+
+	tglGetIntegerv(TGL_MAX_LIGHTS, &_maxLights);
 }
 
 const char *GfxTinyGL::getVideoDeviceName() {
@@ -854,7 +860,12 @@ void GfxTinyGL::disableLights() {
 }
 
 void GfxTinyGL::setupLight(Light *light, int lightId) {
+	if (lightId >= _maxLights) {
+		return;
+	}
+
 	tglEnable(TGL_LIGHTING);
+	tglEnable(TGL_LIGHT0 + lightId);
 	float lightColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	float lightPos[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	float lightDir[] = { 0.0f, 0.0f, -1.0f };
@@ -888,14 +899,12 @@ void GfxTinyGL::setupLight(Light *light, int lightId) {
 		q_attenuation = 0.0f;
 	}
 
-	tglDisable(TGL_LIGHT0 + lightId);
 	tglLightfv(TGL_LIGHT0 + lightId, TGL_DIFFUSE, lightColor);
 	tglLightfv(TGL_LIGHT0 + lightId, TGL_POSITION, lightPos);
 	tglLightfv(TGL_LIGHT0 + lightId, TGL_SPOT_DIRECTION, lightDir);
 	tglLightf(TGL_LIGHT0 + lightId, TGL_SPOT_EXPONENT, spot_exp);
 	tglLightf(TGL_LIGHT0 + lightId, TGL_SPOT_CUTOFF, cutoff);
 	tglLightf(TGL_LIGHT0 + lightId, TGL_QUADRATIC_ATTENUATION, q_attenuation);
-	tglEnable(TGL_LIGHT0 + lightId);
 }
 
 void GfxTinyGL::turnOffLight(int lightId) {
