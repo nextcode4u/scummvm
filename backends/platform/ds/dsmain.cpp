@@ -71,6 +71,10 @@
 #include "backends/plugins/ds/ds-provider.h"
 #include "base/main.h"
 
+#ifdef DYNAMIC_MODULES
+extern "C" void __libc_fini_array();
+#endif
+
 namespace DS {
 
 ///////////////////
@@ -104,6 +108,13 @@ void fastRamReset() {
 /////////////////
 
 int main(int argc, char **argv) {
+#ifdef DYNAMIC_MODULES
+	// Newlib's small exit fallback ignores DSO handles and finalizes the main
+	// executable. Register process cleanup to link the full exit registry before
+	// dynamically loaded plugins call __cxa_finalize on their own handles.
+	if (atexit(__libc_fini_array))
+		return 1;
+#endif
 #ifndef DISABLE_TEXT_CONSOLE
 	videoSetModeSub(MODE_0_2D);
 	vramSetBankC(VRAM_C_SUB_BG_0x06200000);

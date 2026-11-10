@@ -5,6 +5,7 @@
 import importlib.util
 from pathlib import Path
 import io
+import struct
 import subprocess
 import tarfile
 import tempfile
@@ -51,6 +52,36 @@ class SourceProvenanceChecks(unittest.TestCase):
         self.assertEqual(builder.source_state(self.root), (revision, True))
 
 
+class ExitRegistryChecks(unittest.TestCase):
+    def test_weak_or_missing_runtime_cannot_be_accepted_as_dso_aware(self):
+        def executable(binding):
+            names = b"\0__call_exitprocs\0__register_exitproc\0"
+            symbols = bytes(16) + struct.pack("<IIIBBH", 1, 0x2001000, 32, binding | 2, 0, 1)
+            symbols += struct.pack("<IIIBBH", 18, 0x2001020, 32, 0x12, 0, 1)
+            data = bytearray(52)
+            data[:7] = b"\x7fELF\x01\x01\x01"
+            data.extend(b"\0" * 64)
+            symbols_at = len(data)
+            data.extend(symbols)
+            names_at = len(data)
+            data.extend(names)
+            sections_at = len(data)
+            for section in [(0,) * 10, (0, 1, 6, 0x2001000, 52, 64, 0, 0, 4, 0),
+                            (0, 2, 0, 0, symbols_at, len(symbols), 3, 1, 4, 16),
+                            (0, 3, 0, 0, names_at, len(names), 0, 0, 1, 0)]:
+                data.extend(struct.pack("<10I", *section))
+            struct.pack_into("<I", data, 32, sections_at)
+            struct.pack_into("<HH", data, 46, 40, 4)
+            return data
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "authored.elf"
+            path.write_bytes(executable(0x20))  # STB_WEAK: actual failing SDK linkage
+            with self.assertRaisesRegex(ValueError, "full DSO exit registry"):
+                builder.verify_exit_registry(path)
+            path.write_bytes(executable(0x10))
+            builder.verify_exit_registry(path)
+
+
 class ReleaseChecks(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -66,6 +97,12 @@ class ReleaseChecks(unittest.TestCase):
 
     def test_matching_provenance(self):
         release.verify_build(self.manifest, self.binary, self.lock)
+
+    def test_dynamic_release_requires_verified_exit_registry(self):
+        dynamic = {**self.manifest, "modules": ["detection.plg", "lure.plg"]}
+        with self.assertRaisesRegex(ValueError, "DSO exit registry"):
+            release.verify_build(dynamic, self.binary, self.lock)
+        release.verify_build({**dynamic, "exit_registry_verified": True}, self.binary, self.lock)
 
     def test_dirty_source_is_rejected(self):
         with self.assertRaises(ValueError):

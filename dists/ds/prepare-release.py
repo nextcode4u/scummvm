@@ -21,6 +21,8 @@ def sha256(path):
 
 
 def verify_build(manifest, binary, lock):
+    if manifest.get("modules") and manifest.get("exit_registry_verified") is not True:
+        raise ValueError("dynamic release lacks verified DSO exit registry")
     if manifest["source_dirty"]:
         raise ValueError("release builds require committed source")
     if sha256(binary) != manifest["sha256"]:

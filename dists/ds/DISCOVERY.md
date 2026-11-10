@@ -1,7 +1,8 @@
 # Nintendo DS discovery branch
 
 This branch follows ScummVM's upstream Nintendo DS port and its devkitPro SDK.
-Its starting point is the upstream v2026.4.0 release. Compatible homebrew
+It started at v2026.4.0 and now includes upstream master through
+`1a583c6d7168a2fad35d750ff8ef35f3abc27fcc` (2026.4.1git). Compatible homebrew
 launchers can pass command-line arguments without using the same SDK.
 
 Use upstream filesystem and SDK build support; keep launcher integration
@@ -75,10 +76,17 @@ cache also starts with an empty directory name. Explicit user save paths retain
 precedence. The earlier timer, filesystem and BlocksDS port changes are not
 carried over.
 
-The branch also backports upstream's
+The branch also includes upstream's
 [`BASE: Fix __dso_handle definition`](https://github.com/scummvm/scummvm/commit/199a2b078e5f0d2a4871577d11bfc7e7413a9abe)
 without modification. The build helper checks each module's initialized,
 self-relocated destructor handle to reject stale pre-fix plugins.
+
+Dynamic builds register the main executable's cleanup with `atexit` before
+loading any plugins. This links newlib's full DSO-aware exit registry: its weak
+fallback ignores the handle passed to `__cxa_finalize` and runs process-wide
+finalizers during plugin unload, freeing shared C++ state twice. The normal SDK
+is unchanged. The build and release helpers require the strong registry symbols
+in dynamic builds; static builds retain their existing startup behavior.
 
 The full 43-engine dynamic build and the smaller two-engine CI build compile.
 Emulator tests cover discovery of Beneath a Steel Sky and Lure of the Temptress,
@@ -87,9 +95,12 @@ also passes saving, cold-start save enumeration/restoration and returning to
 ScummVM's launcher and then the calling homebrew launcher. These checks do not establish compatibility
 for every engine or physical DS/DSi hardware.
 
-A direct restore from the game list in the full dynamic build can stall during
-detection-plugin unloading. This remains under investigation; successful static
-save tests do not establish that this dynamic route is ready for release.
+The full dynamic build restores an existing Lure save directly from the game
+list, writes a second slot, and returns through ScummVM's launcher to the calling
+homebrew launcher. After a full restart, the new slot is listed and restores
+successfully through the same dynamic path.
+These checks cover the reported plugin-unload failure, not every engine's save
+format or memory requirements.
 The Sky intro also produces nonzero stereo output in the emulator. Listening
 checks, broader game coverage, flashcards and physical-device behavior still
 need validation. Keep these builds experimental until the compatibility checks
@@ -109,7 +120,8 @@ python3 dists/ds/prepare-release.py /tmp/scummvm-ds \
 ```
 
 `prepare-release.py` verifies the binary, source revision, ARM7, SDK libraries
-and compiler runtimes against the reviewed lock file. It downloads that exact
+and compiler runtimes against the reviewed lock file. Dynamic builds also need
+the verified DSO exit registry. It downloads that exact
 fork revision and checksum-pinned SDK sources and patches. A different SDK
 requires a source and notice review before updating `discovery-sdk.json`.
 

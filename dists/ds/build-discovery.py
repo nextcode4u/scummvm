@@ -31,14 +31,17 @@ def source_state(source):
         return None, True
 
 
-def verify_plugin_handle(path):
-    """GCC's DSO tag must be a relocated self-pointer, not a zero BSS word."""
+def elf_tables(path):
     data = path.read_bytes()
     if data[:7] != b"\x7fELF\x01\x01\x01":
-        raise ValueError("expected an ELF32 little-endian plugin: " + str(path))
+        raise ValueError("expected ELF32 little-endian data: " + str(path))
     offset = struct.unpack_from("<I", data, 32)[0]
     entry_size, count = struct.unpack_from("<HH", data, 46)
     sections = [struct.unpack_from("<10I", data, offset + i * entry_size) for i in range(count)]
+    return data, sections
+
+
+def elf_symbols(data, sections):
     for table in sections:
         if table[1] != 2:  # SHT_SYMTAB
             continue
@@ -46,20 +49,39 @@ def verify_plugin_handle(path):
         names = data[strings[4]:strings[4] + strings[5]]
         for at in range(table[4], table[4] + table[5], table[9]):
             name, value, size, info, other, section = struct.unpack_from("<IIIBBH", data, at)
-            if names[name:names.find(b"\0", name)] != b"__dso_handle":
-                continue
-            if section >= len(sections) or sections[section][1] == 8 or size != 4:
-                raise ValueError("plugin DSO handle is not initialized data: " + str(path))
-            storage = sections[section]
-            word = struct.unpack_from("<I", data, storage[4] + value - storage[3])[0]
-            relocations = [rel for rel in sections if rel[1] == 9 and rel[7] == section]
-            relocated = any(struct.unpack_from("<II", data, r)[0] == value
-                            and struct.unpack_from("<II", data, r)[1] & 255 == 2
-                            for rel in relocations
-                            for r in range(rel[4], rel[4] + rel[5], rel[9]))
-            if word != value or not relocated:
-                raise ValueError("plugin DSO handle is not a relocated self-pointer: " + str(path))
-            return
+            yield names[name:names.find(b"\0", name)], value, size, info, section
+
+
+def verify_exit_registry(path):
+    """Plugin finalization must not bind to newlib's weak process-exit fallback."""
+    data, sections = elf_tables(path)
+    required = {b"__call_exitprocs", b"__register_exitproc"}
+    for name, value, size, info, section in elf_symbols(data, sections):
+        if name in required and info == 0x12 and 0 < section < len(sections):
+            required.remove(name)  # STB_GLOBAL | STT_FUNC, defined in this executable
+    if required:
+        raise ValueError("DS executable lacks the full DSO exit registry: "
+                         + ", ".join(sorted(name.decode() for name in required)))
+
+
+def verify_plugin_handle(path):
+    """GCC's DSO tag must be a relocated self-pointer, not a zero BSS word."""
+    data, sections = elf_tables(path)
+    for name, value, size, info, section in elf_symbols(data, sections):
+        if name != b"__dso_handle":
+            continue
+        if section >= len(sections) or sections[section][1] == 8 or size != 4:
+            raise ValueError("plugin DSO handle is not initialized data: " + str(path))
+        storage = sections[section]
+        word = struct.unpack_from("<I", data, storage[4] + value - storage[3])[0]
+        relocations = [rel for rel in sections if rel[1] == 9 and rel[7] == section]
+        relocated = any(struct.unpack_from("<II", data, r)[0] == value
+                        and struct.unpack_from("<II", data, r)[1] & 255 == 2
+                        for rel in relocations
+                        for r in range(rel[4], rel[4] + rel[5], rel[9]))
+        if word != value or not relocated:
+            raise ValueError("plugin DSO handle is not a relocated self-pointer: " + str(path))
+        return
     raise ValueError("plugin has no DSO handle: " + str(path))
 
 
@@ -132,6 +154,7 @@ def main():
         raise RuntimeError("incomplete ARM9/ARM7 image")
     modules = sorted(p.name for p in (build / "romfs/plugins").glob("*.plg"))
     if not args.static:
+        verify_exit_registry(build / "scummvm.elf")
         missing = {name + ".plg" for name in engines} | {"detection.plg"}
         missing.difference_update(modules)
         if missing:
@@ -150,6 +173,7 @@ def main():
                     "-print-file-name=" + name], text=True).strip())
         runtime_hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
     manifest = {"source_commit": commit, "source_dirty": dirty, "compiler": compiler,
+                "exit_registry_verified": not args.static,
                 "configure": flags, "engines": engines, "modules": modules,
                 "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
                 "sdk_libraries_sha256": sdk_hashes,
