@@ -27,6 +27,10 @@ Modules are embedded in NitroFS along with their detection plugin and data.
 Module presence is not a compatibility claim for every game in an engine.
 The selected build enables zlib and MP3, with Ogg/Vorbis/FLAC disabled.
 
+The same helper can build an extracted source archive without Git metadata.
+Such builds record an unknown revision and are excluded from verified release
+packaging; an export nested inside another repository cannot inherit its revision.
+
 For a smaller diagnostic build, add `--engines=sky,lure`. `--static` embeds the
 selected engines directly. `--configure-only` checks the SDK and generates build
 configuration without compiling. The source-path symlink handles spaces in the

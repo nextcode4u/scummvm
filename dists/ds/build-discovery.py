@@ -16,6 +16,21 @@ def engine_names(path):
             if line.strip() and not line.lstrip().startswith("#")]
 
 
+def source_state(source):
+    """Exports can build, but must not inherit a parent repository's provenance."""
+    source = source.resolve()
+    try:
+        root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"],
+                                       cwd=source, stderr=subprocess.DEVNULL, text=True).strip()
+        if Path(root).resolve() != source:
+            return None, True
+        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
+        dirty = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=source))
+        return commit, dirty
+    except (OSError, subprocess.CalledProcessError):
+        return None, True
+
+
 def verify_plugin_handle(path):
     """GCC's DSO tag must be a relocated self-pointer, not a zero BSS word."""
     data = path.read_bytes()
@@ -123,8 +138,7 @@ def main():
             raise RuntimeError("missing engine modules: " + ", ".join(sorted(missing)))
         for name in modules:
             verify_plugin_handle(build / "romfs/plugins" / name)
-    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
-    dirty = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=source))
+    commit, dirty = source_state(source)
     compiler = subprocess.check_output([str(arm / "bin/arm-none-eabi-g++"), "--version"], text=True).splitlines()[0]
     libraries = ("libnds/lib/libnds9.a", "libnds/lib/libmm9.a", "calico/lib/libcalico_ds9.a",
                  "libnds/lib/libfilesystem.a", "libnds/lib/libfat.a",

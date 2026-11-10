@@ -132,7 +132,10 @@ def main():
                 notices["sdk/" + name] = text
     notes = ("ScummVM DS discovery source and SDK inputs\n\n"
              + "ScummVM revision: " + revision + "\n"
-             + "Build: python3 dists/ds/build-discovery.py /tmp/scummvm-ds\n"
+             + "Extract scummvm-source.zip, enter its source directory, then run:\n"
+             + "python3 dists/ds/build-discovery.py /tmp/scummvm-ds\n"
+             + "An exported source build records no Git revision and cannot be repackaged as a verified release.\n"
+             + "For release provenance, clone https://github.com/" + args.repository + ".git and checkout the revision above.\n"
              + "SDK package recipes: " + lock["sdk_recipe_reference"] + "\n"
              + "Toolchain recipes: " + lock["toolchain_recipe_reference"] + "\n"
              + "libmad and newlib use the included devkitPro patches (patch -p1).\n"

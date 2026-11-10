@@ -5,6 +5,7 @@
 import importlib.util
 from pathlib import Path
 import io
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -12,6 +13,42 @@ import unittest
 spec = importlib.util.spec_from_file_location("release", Path(__file__).with_name("prepare-release.py"))
 release = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release)
+
+
+spec = importlib.util.spec_from_file_location("builder", Path(__file__).with_name("build-discovery.py"))
+builder = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(builder)
+
+
+class SourceProvenanceChecks(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+
+    def init_repository(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        (self.root / "fixture").write_text("original\n")
+        subprocess.run(["git", "add", "fixture"], cwd=self.root, check=True)
+        subprocess.run(["git", "-c", "user.name=Build test", "-c", "user.email=test@example.invalid",
+                        "commit", "-qm", "Authored fixture"], cwd=self.root, check=True)
+
+    def test_exported_source_has_no_release_provenance(self):
+        self.assertEqual(builder.source_state(self.root), (None, True))
+
+    def test_nested_export_does_not_inherit_parent_revision(self):
+        self.init_repository()
+        export = self.root / "source-export"
+        export.mkdir()
+        self.assertEqual(builder.source_state(export), (None, True))
+
+    def test_clean_and_modified_checkout_provenance(self):
+        self.init_repository()
+        revision, dirty = builder.source_state(self.root)
+        self.assertRegex(revision, r"^[0-9a-f]{40}$")
+        self.assertFalse(dirty)
+        (self.root / "fixture").write_text("modified\n")
+        self.assertEqual(builder.source_state(self.root), (revision, True))
 
 
 class ReleaseChecks(unittest.TestCase):
