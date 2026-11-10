@@ -86,7 +86,8 @@ void OSystem_DS::initBackend() {
 	_eventSource = new DSEventSource();
 	_eventManager = new DSEventManager(_eventSource);
 
-	_savefileManager = new DefaultSaveFileManager();
+	// A nonempty default makes the save manager scan existing files on startup.
+	_savefileManager = new DefaultSaveFileManager(Common::Path("."));
 	_timerManager = new DefaultTimerManager();
 	timerStart(0, ClockDivider_1, (u16)TIMER_FREQ(1000), timerTickHandler);
 
