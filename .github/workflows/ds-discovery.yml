@@ -24,6 +24,8 @@ jobs:
       image: devkitpro/devkitarm@sha256:116afba8df8453961de2936ffab20dd441edf4d682856c1ec8b0e53d7ed0bbf5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Trust the checked-out workspace inside the container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Record SDK versions
         run: dkp-pacman -Q devkitARM libnds calico maxmod-nds ndstool nds-libmad nds-zlib
       - name: Build and check DS parser and modules
