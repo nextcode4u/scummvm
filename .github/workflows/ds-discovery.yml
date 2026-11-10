@@ -26,6 +26,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Trust the checked-out workspace inside the container
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Check release provenance and notice handling
+        run: python3 -B dists/ds/test-discovery.py
       - name: Record SDK versions
         run: dkp-pacman -Q devkitARM libnds calico maxmod-nds ndstool nds-libmad nds-zlib
       - name: Build and check DS parser and modules

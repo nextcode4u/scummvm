@@ -1,0 +1,79 @@
+{
+  "sdk_recipe_reference": "https://github.com/devkitPro/pacman-packages/tree/5c46517a8a1a1f0939a90b8068655ea00fa125b9",
+  "sdk_libraries_sha256": {
+    "libnds/lib/libnds9.a": "b3fe69020b00694da4d1de950f439bc2459292345aa5408f9256f977233924fa",
+    "libnds/lib/libmm9.a": "6fdf0afa521195e2cb38cbd92ac7de26d217c4817b3cb6ba63ff462024c927b8",
+    "calico/lib/libcalico_ds9.a": "e58b442ae4ae57130666a08fef568cfa5496e8052336a359a7b8da288c34c27a",
+    "libnds/lib/libfilesystem.a": "f0a17a43c74d2fe5474fa2fd29c8f14799e777d7d75a2cc4d11c20a6e7b161c5",
+    "libnds/lib/libfat.a": "479b063888e12238413b35ecf62658675190f4fa519a1ef519a50f5e43c3e280",
+    "portlibs/nds/lib/libmad.a": "460934c644ded2d6ac92c2c8c239a6a18828652eacd7a091a6b7b51526f16678",
+    "portlibs/nds/lib/libz.a": "35fc1d50dd0f013b8c5286eaee0ebbf8620f39b68486fcdf30bb12c15ac3a203"
+  },
+  "arm7_sha256": "aa102bfa9c33c07f15babc32ab3aecfe334114b7ca3ffcfbcf20860e85b4641e",
+  "sources": [
+    {
+      "name": "calico-1.2.0.tar.gz",
+      "url": "https://github.com/devkitPro/calico/archive/refs/tags/v1.2.0.tar.gz",
+      "sha256": "9f9988e99ad0ef3017547389f957d722445a9892074836cca3030ef80dcb2635"
+    },
+    {
+      "name": "libnds-2.0.2.tar.gz",
+      "url": "https://github.com/devkitPro/libnds/archive/refs/tags/v2.0.2.tar.gz",
+      "sha256": "7bd4acd777b4f0fb5087897c16ed4087642fb0e2c0ac1970a9079b255d5865d4"
+    },
+    {
+      "name": "maxmod-2.1.0.tar.gz",
+      "url": "https://github.com/devkitPro/maxmod/archive/refs/tags/v2.1.0.tar.gz",
+      "sha256": "1d5c76245855704dd4b88de8265885183de32c6a1988b93f7c22bf1ea96ef8b0"
+    },
+    {
+      "name": "libdvm-2.1.0.tar.gz",
+      "url": "https://github.com/devkitPro/libdvm/archive/refs/tags/v2.1.0.tar.gz",
+      "sha256": "f3fc17671c8234b345a8b742252d4f26bbe481d8f73b6f990b0d820e97a0616f"
+    },
+    {
+      "name": "fatfs-mod-0.15.3.tar.gz",
+      "url": "https://github.com/devkitPro/fatfs-mod/archive/refs/tags/v0.15.3.tar.gz",
+      "sha256": "26f55e648df6b5cc05204d9288b0c93d30572872c834c2a861b591bad1a3997f"
+    },
+    {
+      "name": "libmad-0.15.1b.tar.gz",
+      "url": "https://downloads.sourceforge.net/project/mad/libmad/0.15.1b/libmad-0.15.1b.tar.gz",
+      "sha256": "bbfac3ed6bfbc2823d3775ebb931087371e142bb0e9bb1bee51a76a6e0078690"
+    },
+    {
+      "name": "libmad-0.15.1b.patch",
+      "url": "https://raw.githubusercontent.com/devkitPro/pacman-packages/5c46517a8a1a1f0939a90b8068655ea00fa125b9/nds/libmad/libmad-0.15.1b.patch",
+      "sha256": "2b7c29f4383b6f92b3b33144ce445f9558ff3e3fa4f185cec13d44969c7c9b11"
+    },
+    {
+      "name": "zlib-1.3.tar.gz",
+      "url": "https://github.com/madler/zlib/archive/refs/tags/v1.3.tar.gz",
+      "sha256": "b5b06d60ce49c8ba700e0ba517fa07de80b5d4628a037f4be8ad16955be7a7c0"
+    },
+    {
+      "name": "newlib-4.6.0.20260123.tar.gz",
+      "url": "https://sourceware.org/pub/newlib/newlib-4.6.0.20260123.tar.gz",
+      "sha256": "6ff27e3bf022666f43f7802255be680eeff722ac181b1725d21e2e8318604ee3"
+    },
+    {
+      "name": "newlib-4.6.0.20260123-4.patch",
+      "url": "https://raw.githubusercontent.com/devkitPro/buildscripts/5740da9beb433ff9f5b724fafc1127f3a5ddc944/patches/newlib-4.6.0.20260123-4.patch",
+      "sha256": "6d5aba4356553c727765c98e7553d3784f31d361c856e220ef27cc26353fb88f"
+    }
+  ],
+  "runtime_notices": [
+    {
+      "name": "gcc-runtime-exception.txt",
+      "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/COPYING.RUNTIME",
+      "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74"
+    }
+  ],
+  "toolchain_recipe_reference": "https://github.com/devkitPro/buildscripts/tree/5740da9beb433ff9f5b724fafc1127f3a5ddc944",
+  "compiler_runtime_sha256": {
+    "libc.a": "54e727d83f06b209dca631313460352e1b43abef427e3caf74f719ced5c20ecb",
+    "libm.a": "6350d85c6c93f2dfe8e8452d5a8c4aa6444e5b171f8a617c61c44035856d2d47",
+    "libgcc.a": "c0ee58c5dbfa3eb5c11b81540964e600486468215f35bae1851015a108fbb962",
+    "libstdc++.a": "63b6fca2117cb075b269c8d74dd9854d13cf9d92ac7cf7656e32f355206aa8d7"
+  }
+}

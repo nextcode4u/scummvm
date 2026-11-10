@@ -130,10 +130,16 @@ def main():
                  "libnds/lib/libfilesystem.a", "libnds/lib/libfat.a",
                  "portlibs/nds/lib/libmad.a", "portlibs/nds/lib/libz.a")
     sdk_hashes = {name: hashlib.sha256((sdk / name).read_bytes()).hexdigest() for name in libraries}
+    runtime_hashes = {}
+    for name in ("libc.a", "libm.a", "libgcc.a", "libstdc++.a"):
+        path = Path(subprocess.check_output([env["CXX"], "-mthumb", "-mfloat-abi=soft",
+                    "-print-file-name=" + name], text=True).strip())
+        runtime_hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
     manifest = {"source_commit": commit, "source_dirty": dirty, "compiler": compiler,
                 "configure": flags, "engines": engines, "modules": modules,
                 "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
                 "sdk_libraries_sha256": sdk_hashes,
+                "compiler_runtime_sha256": runtime_hashes,
                 "arm7_sha256": hashlib.sha256((sdk / "calico/bin/ds7_maine.elf").read_bytes()).hexdigest()}
     (build / "discovery-build.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(binary)
