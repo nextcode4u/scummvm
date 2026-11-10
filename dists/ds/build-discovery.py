@@ -16,6 +16,38 @@ def engine_names(path):
             if line.strip() and not line.lstrip().startswith("#")]
 
 
+def verify_plugin_handle(path):
+    """GCC's DSO tag must be a relocated self-pointer, not a zero BSS word."""
+    data = path.read_bytes()
+    if data[:7] != b"\x7fELF\x01\x01\x01":
+        raise ValueError("expected an ELF32 little-endian plugin: " + str(path))
+    offset = struct.unpack_from("<I", data, 32)[0]
+    entry_size, count = struct.unpack_from("<HH", data, 46)
+    sections = [struct.unpack_from("<10I", data, offset + i * entry_size) for i in range(count)]
+    for table in sections:
+        if table[1] != 2:  # SHT_SYMTAB
+            continue
+        strings = sections[table[6]]
+        names = data[strings[4]:strings[4] + strings[5]]
+        for at in range(table[4], table[4] + table[5], table[9]):
+            name, value, size, info, other, section = struct.unpack_from("<IIIBBH", data, at)
+            if names[name:names.find(b"\0", name)] != b"__dso_handle":
+                continue
+            if section >= len(sections) or sections[section][1] == 8 or size != 4:
+                raise ValueError("plugin DSO handle is not initialized data: " + str(path))
+            storage = sections[section]
+            word = struct.unpack_from("<I", data, storage[4] + value - storage[3])[0]
+            relocations = [rel for rel in sections if rel[1] == 9 and rel[7] == section]
+            relocated = any(struct.unpack_from("<II", data, r)[0] == value
+                            and struct.unpack_from("<II", data, r)[1] & 255 == 2
+                            for rel in relocations
+                            for r in range(rel[4], rel[4] + rel[5], rel[9]))
+            if word != value or not relocated:
+                raise ValueError("plugin DSO handle is not a relocated self-pointer: " + str(path))
+            return
+    raise ValueError("plugin has no DSO handle: " + str(path))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("build", type=Path, help="out-of-tree directory without spaces")
@@ -89,6 +121,8 @@ def main():
         missing.difference_update(modules)
         if missing:
             raise RuntimeError("missing engine modules: " + ", ".join(sorted(missing)))
+        for name in modules:
+            verify_plugin_handle(build / "romfs/plugins" / name)
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
     dirty = bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=source))
     compiler = subprocess.check_output([str(arm / "bin/arm-none-eabi-g++"), "--version"], text=True).splitlines()[0]
